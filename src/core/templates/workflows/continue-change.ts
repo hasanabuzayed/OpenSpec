@@ -30,21 +30,30 @@ const PLANNING_COMPLETE_HANDOFF = optionalWorkflow(
  * and the next run would move on without reading its instruction again (#2034).
  */
 const PARTIAL_ARTIFACT_CHECK = `**Before anything else, finish a partly written artifact**:
-   - An artifact whose output is a glob pattern (e.g. \`specs/**/*.md\`) reads \`done\` as soon as one matching file exists, so a run interrupted while writing its files leaves it \`done\` with some still missing
-   - For each such \`done\` artifact, first get its instructions and read any completed dependencies needed to determine the expected files. Then compare those files with \`artifactPaths.<id>.existingOutputPaths\`. For spec-driven's \`specs\`, read the proposal and check for one \`specs/<capability-path>/spec.md\` per capability it lists; resolve each expected path against \`changeRoot\` before comparing path identity, and verify each one remains inside \`changeRoot\` after resolving symlinks, both in its parent directories and in the file itself if it already exists
-   - Never write an expected path that fails that check; stop and tell the user. If any are missing, write only the missing files, each at its checked path - when the \`instruction\` field delegates creation to a skill or command, invoke it only if it can write each file to its checked path; otherwise stop and tell the user - and STOP - that counts as this invocation's ONE artifact. If you cannot tell whether a file was left out on purpose, ask the user`;
+   - An artifact whose output is a glob pattern (for example, \`specs/**/*.md\`) reads \`done\` as soon as one matching file exists. If a run stops while it writes the files, the artifact reads \`done\` with some files still missing.
+   - For each such \`done\` artifact, first get its instructions and read any completed dependencies needed to determine the expected files.
+     Then compare those files with \`artifactPaths.<id>.existingOutputPaths\`.
+     For spec-driven's \`specs\`, read the proposal and check for one \`specs/<capability-path>/spec.md\` per capability it lists.
+     Resolve each expected path against \`changeRoot\` before comparing path identity.
+     After resolving symlinks, verify each path remains inside \`changeRoot\`.
+     Check both its parent directories and the file itself if it already exists
+   - Never write an expected path that fails that check. Stop and tell the user.
+     If any are missing, write only the missing files, each at its checked path.
+     When the \`instruction\` field delegates creation, invoke the skill or command only if it can write each file to its checked path.
+     Otherwise stop and tell the user - and STOP - that counts as this invocation's ONE artifact.
+     If you cannot tell whether a file was left out on purpose, ask the user`;
 
 export function getContinueChangeSkillTemplate(): SkillTemplate {
   return {
     name: 'openspec-continue-change',
     description: 'Continue working on an OpenSpec change by creating the next artifact. Use when the user wants to progress their change, create the next artifact, or continue their workflow. Also use when the user says "openspec continue" or "opsx continue".',
-    instructions: `Continue working on a change by creating the next artifact.
+    instructions: `Continue work on a change. Create the next artifact.
 
 ${STORE_SELECTION_GUIDANCE}
 
 ${PROJECT_ROOT_GUARD}
 
-**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Input**: You can specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**
 
@@ -53,25 +62,25 @@ ${PROJECT_ROOT_GUARD}
    If a name is provided, use it. Otherwise:
    - Infer from conversation context if the user mentioned a change
    - Auto-select if only one active change exists
-   - If ambiguous, run \`openspec list --json\` to get available changes sorted by most recently modified, and ask the user to select one
+   - If ambiguous, run \`openspec list --json\` to get available changes sorted by most recently updated, and ask the user to select one
 
-   When prompting, present the top 3-4 most recently modified changes as options, showing:
+   When you prompt, show the top 3-4 most recently updated changes as options. Show:
    - Change name
    - Status (e.g., "0/5 tasks", "complete", "no tasks")
-   - How recently it was modified (from \`lastModified\` field)
+   - How recently it changed (from \`lastModified\` field)
 
-   Mark the most recently modified change as "(Recommended)" since it's likely what the user wants to continue.
+   Mark the most recently updated change as "(Recommended)" since it is likely what the user wants to continue.
 
-   Always announce: "Using change: <name>" and how to override (e.g., \`/opsx:continue <other>\`).
+   Always announce: "Using change: <name>". Also show how to override it, for example, \`/opsx:continue <other>\`.
 
 2. **Check current status**
    \`\`\`bash
    openspec status --change "<name>" --json
    \`\`\`
-   Parse the JSON to understand current state. The response includes:
-   - \`schemaName\`: The workflow schema being used (e.g., "spec-driven")
+   Parse the JSON to understand the current state. The response includes:
+   - \`schemaName\`: The workflow schema in use (for example, "spec-driven")
    - \`artifacts\`: Array of artifacts with their status ("done", "skipped", "ready", "blocked")
-   - \`isPlanningComplete\`: Boolean indicating if all planning artifacts are complete. Older CLI versions expose the same value as \`isComplete\`.
+   - \`isPlanningComplete\`: Boolean that shows if all planning artifacts are complete. Older CLI versions expose the same value as \`isComplete\`.
    - \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, and \`actionContext\`: path and scope context. Use these instead of assuming repo-local paths.
 
 3. **Act based on status**:
@@ -105,21 +114,27 @@ ${PROJECT_ROOT_GUARD}
      - \`dependencies\`: Completed artifacts to read for context (entries with \`skipped: true\` have no files - do not look for them)
      - \`skipped\`/\`warning\`: present when the change declares skip_specs and this artifact must NOT be created - pick another artifact
    - **Create the artifact file**:
-     - Read any completed dependency files for context - always re-read them from disk, even if you saw them earlier in the conversation (the user may have edited them)
-     - Choose the output path before creating anything. If the \`resolvedOutputPath\` specified in instructions is a glob pattern, choose a concrete path inside \`changeRoot\` using the schema instruction and the change's context, and verify it remains inside \`changeRoot\` after resolving symlinks, both in its parent directories and in the file itself if it already exists; if it does not, stop and tell the user. Otherwise the output path is \`resolvedOutputPath\`
-     - If the \`instruction\` field delegates creation to a specific skill or command, invoke it only if it can write the artifact to that output path; otherwise stop and tell the user
+     - Read any completed dependency files for context. Always re-read them from disk, even if you saw them earlier in the conversation. They may have edits from the user since then.
+     - Choose the output path before creating anything.
+       If the \`resolvedOutputPath\` specified in instructions is a glob pattern, choose a concrete path inside \`changeRoot\`.
+       Use the schema instruction and the change's context.
+
+       After resolving symlinks, verify the path remains inside \`changeRoot\`.
+       Check both its parent directories and the file itself if it already exists.
+       If it does not, stop and tell the user. Otherwise the output path is \`resolvedOutputPath\`
+     - If the \`instruction\` field delegates creation to a specific skill or command, invoke it only if it can write the artifact to that output path. Otherwise stop and tell the user
      - Otherwise, write it yourself:
        - Use \`template\` as the structure - fill in its sections
        - Apply \`context\` and \`rules\` as constraints when writing - but do NOT copy them into the file
        - Write the file to that output path
      - Either way, verify the artifact file exists at that output path
-   - Show what was created and what's now unlocked
+   - Show what was created and what is now unlocked
    - STOP after creating ONE artifact
 
    ---
 
    **If no artifacts are ready (all blocked)**:
-   - This shouldn't happen with a valid schema
+   - This should not happen with a valid schema
    - Show status and suggest checking for issues
 
 4. **After creating an artifact, show progress**
@@ -131,24 +146,28 @@ ${PROJECT_ROOT_GUARD}
 
 After each invocation, show:
 - Which artifact was created
-- Schema workflow being used
+- Schema workflow in use
 - Current progress (N/M complete)
 - What artifacts are now unlocked
 - Prompt: "Want to continue? Just ask me to continue or tell me what to do next."
 
 **Artifact Creation Guidelines**
 
-The artifact types and their purpose depend on the schema. The \`instruction\` field from the instructions output is the authoritative guidance for each artifact - follow it even when the artifact has a familiar name (proposal.md, tasks.md, etc.), since custom schemas may define different content or a different process for the same file names.
+The artifact types and their purpose depend on the schema. The \`instruction\` field from the instructions output is the authoritative guidance for each artifact.
 
-If the \`instruction\` field directs you to use a specific skill or command to create the artifact, invoke it instead of writing the artifact directly - but only once you have chosen and checked the output path, and only if it can write there.
+Follow it even when the artifact has a familiar name (proposal.md, tasks.md, etc.).
+Custom schemas may define different content or a different process for the same file names.
+
+If the \`instruction\` field directs you to a specific skill or command, invoke it to create the artifact instead of writing the artifact directly.
+Invoke it only once you have chosen and checked the output path, and only if it can write there.
 
 **Guardrails**
 - Create ONE artifact per invocation
-- Always read dependency artifacts before creating a new one - re-read from disk, not from conversation memory (files may have changed since you last saw them)
+- Always read dependency artifacts before creating a new one - re-read from disk, not from conversation memory (files can change after you see them)
 - Never skip artifacts or create out of order
 - If context is unclear, ask the user before creating
-- Verify the artifact file exists after writing before marking progress
-- Use the schema's artifact sequence, don't assume specific artifact names
+- Verify the artifact file exists after writing before you mark progress
+- Use the schema's artifact sequence, do not assume specific artifact names
 - **IMPORTANT**: \`context\` and \`rules\` are constraints for YOU, not content for the file
   - Do NOT copy \`<context>\`, \`<rules>\`, \`<project_context>\` blocks into the artifact
   - These guide what you write, but should never appear in the output`,
@@ -164,7 +183,7 @@ export function getOpsxContinueCommandTemplate(): CommandTemplate {
     description: 'Continue working on a change - create the next artifact (Experimental)',
     category: 'Workflow',
     tags: ['workflow', 'artifacts', 'experimental'],
-    content: `Continue working on a change by creating the next artifact.
+    content: `Continue work on a change. Create the next artifact.
 
 ${STORE_SELECTION_GUIDANCE}
 
@@ -179,25 +198,25 @@ ${PROJECT_ROOT_GUARD}
    If a name is provided, use it. Otherwise:
    - Infer from conversation context if the user mentioned a change
    - Auto-select if only one active change exists
-   - If ambiguous, run \`openspec list --json\` to get available changes sorted by most recently modified, and ask the user to select one
+   - If ambiguous, run \`openspec list --json\` to get available changes sorted by most recently updated, and ask the user to select one
 
-   When prompting, present the top 3-4 most recently modified changes as options, showing:
+   When you prompt, show the top 3-4 most recently updated changes as options. Show:
    - Change name
    - Status (e.g., "0/5 tasks", "complete", "no tasks")
-   - How recently it was modified (from \`lastModified\` field)
+   - How recently it changed (from \`lastModified\` field)
 
-   Mark the most recently modified change as "(Recommended)" since it's likely what the user wants to continue.
+   Mark the most recently updated change as "(Recommended)" since it is likely what the user wants to continue.
 
-   Always announce: "Using change: <name>" and how to override (e.g., \`/opsx:continue <other>\`).
+   Always announce: "Using change: <name>". Also show how to override it, for example, \`/opsx:continue <other>\`.
 
 2. **Check current status**
    \`\`\`bash
    openspec status --change "<name>" --json
    \`\`\`
-   Parse the JSON to understand current state. The response includes:
-   - \`schemaName\`: The workflow schema being used (e.g., "spec-driven")
+   Parse the JSON to understand the current state. The response includes:
+   - \`schemaName\`: The workflow schema in use (for example, "spec-driven")
    - \`artifacts\`: Array of artifacts with their status ("done", "skipped", "ready", "blocked")
-   - \`isPlanningComplete\`: Boolean indicating if all planning artifacts are complete. Older CLI versions expose the same value as \`isComplete\`.
+   - \`isPlanningComplete\`: Boolean that shows if all planning artifacts are complete. Older CLI versions expose the same value as \`isComplete\`.
    - \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, and \`actionContext\`: path and scope context. Use these instead of assuming repo-local paths.
 
 3. **Act based on status**:
@@ -231,21 +250,27 @@ ${PROJECT_ROOT_GUARD}
      - \`dependencies\`: Completed artifacts to read for context (entries with \`skipped: true\` have no files - do not look for them)
      - \`skipped\`/\`warning\`: present when the change declares skip_specs and this artifact must NOT be created - pick another artifact
    - **Create the artifact file**:
-     - Read any completed dependency files for context - always re-read them from disk, even if you saw them earlier in the conversation (the user may have edited them)
-     - Choose the output path before creating anything. If the \`resolvedOutputPath\` specified in instructions is a glob pattern, choose a concrete path inside \`changeRoot\` using the schema instruction and the change's context, and verify it remains inside \`changeRoot\` after resolving symlinks, both in its parent directories and in the file itself if it already exists; if it does not, stop and tell the user. Otherwise the output path is \`resolvedOutputPath\`
-     - If the \`instruction\` field delegates creation to a specific skill or command, invoke it only if it can write the artifact to that output path; otherwise stop and tell the user
+     - Read any completed dependency files for context. Always re-read them from disk, even if you saw them earlier in the conversation. They may have edits from the user since then.
+     - Choose the output path before creating anything.
+       If the \`resolvedOutputPath\` specified in instructions is a glob pattern, choose a concrete path inside \`changeRoot\`.
+       Use the schema instruction and the change's context.
+
+       After resolving symlinks, verify the path remains inside \`changeRoot\`.
+       Check both its parent directories and the file itself if it already exists.
+       If it does not, stop and tell the user. Otherwise the output path is \`resolvedOutputPath\`
+     - If the \`instruction\` field delegates creation to a specific skill or command, invoke it only if it can write the artifact to that output path. Otherwise stop and tell the user
      - Otherwise, write it yourself:
        - Use \`template\` as the structure - fill in its sections
        - Apply \`context\` and \`rules\` as constraints when writing - but do NOT copy them into the file
        - Write the file to that output path
      - Either way, verify the artifact file exists at that output path
-   - Show what was created and what's now unlocked
+   - Show what was created and what is now unlocked
    - STOP after creating ONE artifact
 
    ---
 
    **If no artifacts are ready (all blocked)**:
-   - This shouldn't happen with a valid schema
+   - This should not happen with a valid schema
    - Show status and suggest checking for issues
 
 4. **After creating an artifact, show progress**
@@ -257,24 +282,28 @@ ${PROJECT_ROOT_GUARD}
 
 After each invocation, show:
 - Which artifact was created
-- Schema workflow being used
+- Schema workflow in use
 - Current progress (N/M complete)
 - What artifacts are now unlocked
 - Prompt: "Run \`/opsx:continue\` to create the next artifact"
 
 **Artifact Creation Guidelines**
 
-The artifact types and their purpose depend on the schema. The \`instruction\` field from the instructions output is the authoritative guidance for each artifact - follow it even when the artifact has a familiar name (proposal.md, tasks.md, etc.), since custom schemas may define different content or a different process for the same file names.
+The artifact types and their purpose depend on the schema. The \`instruction\` field from the instructions output is the authoritative guidance for each artifact.
 
-If the \`instruction\` field directs you to use a specific skill or command to create the artifact, invoke it instead of writing the artifact directly - but only once you have chosen and checked the output path, and only if it can write there.
+Follow it even when the artifact has a familiar name (proposal.md, tasks.md, etc.).
+Custom schemas may define different content or a different process for the same file names.
+
+If the \`instruction\` field directs you to a specific skill or command, invoke it to create the artifact instead of writing the artifact directly.
+Invoke it only once you have chosen and checked the output path, and only if it can write there.
 
 **Guardrails**
 - Create ONE artifact per invocation
-- Always read dependency artifacts before creating a new one - re-read from disk, not from conversation memory (files may have changed since you last saw them)
+- Always read dependency artifacts before creating a new one - re-read from disk, not from conversation memory (files can change after you see them)
 - Never skip artifacts or create out of order
 - If context is unclear, ask the user before creating
-- Verify the artifact file exists after writing before marking progress
-- Use the schema's artifact sequence, don't assume specific artifact names
+- Verify the artifact file exists after writing before you mark progress
+- Use the schema's artifact sequence, do not assume specific artifact names
 - **IMPORTANT**: \`context\` and \`rules\` are constraints for YOU, not content for the file
   - Do NOT copy \`<context>\`, \`<rules>\`, \`<project_context>\` blocks into the artifact
   - These guide what you write, but should never appear in the output`

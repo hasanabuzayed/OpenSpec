@@ -29,7 +29,7 @@ export function getNewChangeSkillTemplate(): SkillTemplate {
   return {
     name: 'openspec-new-change',
     description: 'Start a new OpenSpec change using the experimental artifact workflow. Use when the user wants to create a new feature, fix, or modification with a structured step-by-step approach. Also use when the user says "openspec new change" or "opsx new".',
-    instructions: `Start a new change using the experimental artifact-driven approach.
+    instructions: `Use the experimental artifact-driven approach to start a new change.
 
 ${STORE_SELECTION_GUIDANCE}
 
@@ -44,7 +44,7 @@ ${PROJECT_ROOT_GUARD}
    Ask the user (open-ended, no preset options):
    > "What change do you want to work on? Describe what you want to build or fix."
 
-   From their description, derive a kebab-case name (e.g., "add user authentication" → \`add-user-auth\`).
+   From their description, derive a kebab-case name (for example, "add user authentication" → \`add-user-auth\`).
 
    **IMPORTANT**: Do NOT proceed without understanding what the user wants to build.
 
@@ -62,8 +62,8 @@ ${PROJECT_ROOT_GUARD}
    \`\`\`bash
    openspec new change "<name>"
    \`\`\`
-   Add \`--schema <name>\` only if the user requested a specific workflow.
-   This creates a scaffolded change in the planning home resolved by the CLI.
+   Only if the user requested a specific workflow, add \`--schema <name>\`.
+   This creates a scaffolded change in the planning home that the CLI resolves.
 
 4. **Show the artifact status**
    \`\`\`bash
@@ -72,30 +72,30 @@ ${PROJECT_ROOT_GUARD}
    Use the returned \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, and \`nextSteps\` instead of assuming repo-local paths.
 
 5. **Get instructions for the first artifact**
-   The first artifact depends on the schema (e.g., \`proposal\` for spec-driven).
-   Check the status output to find the first artifact with status "ready".
+   The first artifact depends on the schema (for example, \`proposal\` for spec-driven).
+   Examine the status output to find the first artifact with status "ready".
    \`\`\`bash
    openspec instructions <first-artifact-id> --change "<name>"
    \`\`\`
-   This outputs the template and context for creating the first artifact.
+   This outputs the template and context to create the first artifact.
 
 6. **STOP and wait for user direction**
 
 **Output**
 
-After completing the steps, summarize:
+After you complete the steps, summarize:
 - Change name and location
-- Schema/workflow being used and its artifact sequence
+- Schema/workflow in use and its artifact sequence
 - Current status (0/N artifacts complete)
 - The template for the first artifact
-- Prompt: "Ready to create the first artifact? Just describe what this change is about and I'll draft it, or ask me to continue."
+- Prompt: "Ready to create the first artifact? Just describe what this change is about and I will draft it, or ask me to continue."
 
 **Guardrails**
 - Do NOT create any artifacts yet - just show the instructions
 - Do NOT advance beyond showing the first artifact template
 - If the name is invalid (not kebab-case), ask for a valid name
 - If a change with that name already exists, suggest continuing that change instead
-- Pass --schema if using a non-default workflow`,
+- If using a non-default workflow, pass --schema`,
     license: 'MIT',
     compatibility: 'Requires openspec CLI.',
     metadata: { author: 'openspec', version: '1.0' },
@@ -108,7 +108,7 @@ export function getOpsxNewCommandTemplate(): CommandTemplate {
     description: 'Start a new change using the experimental artifact workflow (OPSX)',
     category: 'Workflow',
     tags: ['workflow', 'artifacts', 'experimental'],
-    content: `Start a new change using the experimental artifact-driven approach.
+    content: `Use the experimental artifact-driven approach to start a new change.
 
 ${STORE_SELECTION_GUIDANCE}
 
@@ -123,7 +123,7 @@ ${PROJECT_ROOT_GUARD}
    Ask the user (open-ended, no preset options):
    > "What change do you want to work on? Describe what you want to build or fix."
 
-   From their description, derive a kebab-case name (e.g., "add user authentication" → \`add-user-auth\`).
+   From their description, derive a kebab-case name (for example, "add user authentication" → \`add-user-auth\`).
 
    **IMPORTANT**: Do NOT proceed without understanding what the user wants to build.
 
@@ -141,8 +141,8 @@ ${PROJECT_ROOT_GUARD}
    \`\`\`bash
    openspec new change "<name>"
    \`\`\`
-   Add \`--schema <name>\` only if the user requested a specific workflow.
-   This creates a scaffolded change in the planning home resolved by the CLI.
+   Only if the user requested a specific workflow, add \`--schema <name>\`.
+   This creates a scaffolded change in the planning home that the CLI resolves.
 
 4. **Show the artifact status**
    \`\`\`bash
@@ -155,15 +155,15 @@ ${PROJECT_ROOT_GUARD}
    \`\`\`bash
    openspec instructions <first-artifact-id> --change "<name>"
    \`\`\`
-   This outputs the template and context for creating the first artifact.
+   This outputs the template and context to create the first artifact.
 
 6. **STOP and wait for user direction**
 
 **Output**
 
-After completing the steps, summarize:
+After you complete the steps, summarize:
 - Change name and location
-- Schema/workflow being used and its artifact sequence
+- Schema/workflow in use and its artifact sequence
 - Current status (0/N artifacts complete)
 - The template for the first artifact
 - Prompt: "Ready to create the first artifact? ${FIRST_ARTIFACT_PROMPT}"
@@ -173,6 +173,6 @@ After completing the steps, summarize:
 - Do NOT advance beyond showing the first artifact template
 - If the name is invalid (not kebab-case), ask for a valid name
 - If a change with that name already exists, ${EXISTING_CHANGE_HINT}
-- Pass --schema if using a non-default workflow`
+- If using a non-default workflow, pass --schema`
   };
 }

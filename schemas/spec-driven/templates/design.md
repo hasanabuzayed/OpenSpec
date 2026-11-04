@@ -2,7 +2,7 @@
 
 ## Context
 
-<!-- Current state and constraints that shape the approach. See proposal.md for motivation - don't restate it -->
+<!-- Current state and constraints that shape the approach. See proposal.md for motivation - do not restate it -->
 
 ## Goals / Non-Goals
 
